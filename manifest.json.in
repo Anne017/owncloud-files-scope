@@ -1,0 +1,15 @@
+{
+    "architecture": "@CLICK_ARCH@",
+    "description": "A simple Unity scope written in JavaScript",
+    "framework": "ubuntu-sdk-15.04.4",
+    "hooks": {
+        "owncloud-files": {
+            "apparmor": "owncloud-files.apparmor",
+            "scope": "owncloud-files"
+        }
+    },
+    "maintainer": "Brian Douglass <bhdouglass@gmail.com>",
+    "name": "owncloud-files-scope.bhdouglass",
+    "title": "owncloud-files-scope",
+    "version": "1.0"
+}

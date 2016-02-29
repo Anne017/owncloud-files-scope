@@ -1,0 +1,11 @@
+[ScopeConfig]
+ScopeRunner=./node_modules/unity-js-scopes/bin/unity-js-scopes-launcher %S %R
+_DisplayName=ownCloud Files
+_Description=An unofficial ownCloud file browsing scope
+Author=Brian Douglass <bhdouglass@gmail.com>
+Icon=icon.png
+
+[Appearance]
+PageHeader.ForegroundColor=#FFFFFF
+PageHeader.Background=color:///#1B2D44
+PageHeader.Logo=logo.png

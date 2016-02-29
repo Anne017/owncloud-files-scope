@@ -1,0 +1,11 @@
+[url]
+type=string
+_displayName=URL to your ownCloud webdav (example.org/ownccloud/remote.php/webdav)
+
+[username]
+type=string
+_displayName=Your ownCloud username
+
+[password]
+type=string
+_displayName=Your ownCloud password (caution: this is not save securely)

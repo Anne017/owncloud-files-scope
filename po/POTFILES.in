@@ -1,0 +1,4 @@
+[type: gettext/ini] src/data/owncloud-files.ini.in
+[type: gettext/ini] src/data/owncloud-files-settings.ini.in
+
+
