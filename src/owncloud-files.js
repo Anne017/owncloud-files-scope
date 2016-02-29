@@ -1,4 +1,3 @@
-var async = require('async');
 var moment = require('moment');
 var path = require('path');
 var webdav = require('webdav-fs/source/client');
@@ -109,6 +108,14 @@ function setup_endpoint() {
         if (url.toLowerCase().indexOf('http://') !== 0 && url.toLowerCase().indexOf('https://') !== 0) {
             url = 'http://' + url;
         }
+
+        if (url.indexOf('/remote.php/webdav') == -1) {
+            if (url[url.length - 1] === '/') {
+                url = url.substring(0, url.length - 1);
+            }
+
+            url += '/remote.php/webdav';
+        }
     }
 
     var username = scope.settings.username ? scope.settings.username.get_string() : '';
@@ -171,7 +178,7 @@ scope.initialize(
                             search_reply.push(parent_result);
                         }
 
-                        webdav.getDir(endpoint, dir).then(function(contents) {
+                        webdav.getDir(endpoint, dir).then(function(contents, b) {
                             var contents = contents.sort(function(a, b) {
                                 if (a.type == 'file' && b.type == 'folder') {
                                     return -1;
@@ -322,12 +329,18 @@ scope.initialize(
                         }
 
                         if (result.get('file')) {
+                            var urlpath = endpoint.url;
+                            if (urlpath[urlpath.length - 1] === '/') {
+                                urlpath = urlpath.substring(0, urlpath.length - 1);
+                            }
+                            urlpath += result.get('path');
+
                             var download = new scopes.lib.PreviewWidget('actions', 'actions');
                             download.add_attribute_value('actions',[
                                 {
                                     id: 'download',
                                     label: 'Download',
-                                    uri: path.join(endpoint.url, result.get('path')),
+                                    uri: urlpath,
                                 }
                             ]);
 

@@ -1,6 +1,6 @@
 [url]
 type=string
-_displayName=URL to your ownCloud webdav (example.org/ownccloud/remote.php/webdav)
+_displayName=URL to your ownCloud webdav (https://example.org/owncloud/remote.php/webdav)
 
 [username]
 type=string

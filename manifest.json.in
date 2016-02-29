@@ -1,6 +1,6 @@
 {
     "architecture": "@CLICK_ARCH@",
-    "description": "A simple Unity scope written in JavaScript",
+    "description": "An unofficial ownCloud file browsing scope",
     "framework": "ubuntu-sdk-15.04.4",
     "hooks": {
         "owncloud-files": {
@@ -11,5 +11,5 @@
     "maintainer": "Brian Douglass <bhdouglass@gmail.com>",
     "name": "owncloud-files-scope.bhdouglass",
     "title": "owncloud-files-scope",
-    "version": "1.1"
+    "version": "1.2"
 }
