@@ -1,7 +1,7 @@
 var async = require('async');
 var moment = require('moment');
 var path = require('path');
-var webdavfs = require('webdav-fs');
+var webdav = require('webdav-fs/source/client');
 var scopes = require('unity-js-scopes');
 var scope = scopes.self; //convenience
 
@@ -45,6 +45,35 @@ var ERROR_TEMPLATE = {
     },
 };
 
+function nice_bytes(bytes) {
+    var unit = 'B';
+
+    if (!bytes) {
+        bytes = 0;
+    }
+    else if (bytes > 1024) {
+        bytes /= 1024;
+        unit = 'KB';
+
+        if (bytes > 1024) {
+            bytes /= 1024;
+            unit = 'MB';
+
+            if (bytes > 1024) {
+                bytes /= 1024;
+                unit = 'GB';
+
+                if (bytes > 1024) {
+                    bytes /= 1024;
+                    unit = 'TB';
+                }
+            }
+        }
+    }
+
+    return bytes.toFixed(1) + ' ' + unit;
+}
+
 function error_result(search_reply, id, title, subtitle, error_message, category_title) {
     category_title = category_title ? category_title : 'error';
     var category_id = category_title.replace(' ', '-').toLowerCase();
@@ -68,41 +97,57 @@ function error_result(search_reply, id, title, subtitle, error_message, category
 
 var connection = null;
 var scope_id = null;
+var endpoint = {
+    url: '',
+    username: '',
+    password: '',
+};
+
+function setup_endpoint() {
+    var url = scope.settings.url ? scope.settings.url.get_string() : '';
+    if (url) {
+        if (url.toLowerCase().indexOf('http://') !== 0 && url.toLowerCase().indexOf('https://') !== 0) {
+            url = 'http://' + url;
+        }
+    }
+
+    var username = scope.settings.username ? scope.settings.username.get_string() : '';
+    var password = scope.settings.password ? scope.settings.password.get_string() : '';
+
+    //Borrowed from https://github.com/perry-mitchell/webdav-fs/blob/master/source/index.js#L22
+    var accessURL = (username.length > 0) ? url.replace(/(https?:\/\/)/i, "$1" + username + ":" + password + "@") : url;
+    if (accessURL[accessURL.length - 1] !== '/') {
+        accessURL += '/';
+    }
+
+    endpoint = {
+        url: accessURL,
+        username: username,
+        password: password
+    };
+}
+
 scope.initialize(
     {}, //options
     {
         run: function scope_run() {
-            //TODO check for settings change in search function
-            var url = scope.settings.url ? scope.settings.url.get_string() : null;
-            if (url) {
-                if (url.indexOf('http://') !== 0 && url.indexOf('https://') !== 0) {
-                    url = 'http://' + url;
-                }
-            }
-
-            var username = scope.settings.username ? scope.settings.username.get_string() : null;
-            var password = scope.settings.password ? scope.settings.password.get_string() : null;
-
-            if (url && username && password) {
-                connection = webdavfs(url, username, password);
-            }
-            else {
-                console.warn('no connection info');
-            }
+            console.log('owncloud file scope running');
         },
         start: function scope_start(id) {
             console.log('owncloud file scope starting up', id);
             scope_id = id;
         },
         search: function scope_search(canned_query, metadata) {
+            setup_endpoint();
+
             return new scopes.lib.SearchQuery(
                 canned_query,
                 metadata,
-                function query_run(search_reply) {
+                function query_run(search_reply) { //TODO departments based on file types (do this after mimetype checking)
                     var qs = canned_query.query_string();
                     console.log('search', qs);
 
-                    if (connection) {
+                    if (endpoint.url) {
                         var category_renderer = new scopes.lib.CategoryRenderer(JSON.stringify(TEMPLATE));
                         var file_category = search_reply.register_category('files', 'Files', '', category_renderer);
                         var folder_category = search_reply.register_category('folders', 'Folders', '', category_renderer);
@@ -126,121 +171,108 @@ scope.initialize(
                             search_reply.push(parent_result);
                         }
 
-                        connection.readdir(dir, function(err, contents) {
-                            if (err) {
-                                console.warn('error reading dir', qs, err.message);
+                        webdav.getDir(endpoint, dir).then(function(contents) {
+                            var contents = contents.sort(function(a, b) {
+                                if (a.type == 'file' && b.type == 'folder') {
+                                    return -1;
+                                }
+                                else if (a.type == 'folder' && b.type == 'file') {
+                                    return 1;
+                                }
+                                else if (a.filename < b.filename) {
+                                    return -1;
+                                }
+                                else if (a.filename > b.filename) {
+                                    return 1;
+                                }
 
-                                search_reply.push(error_result(search_reply, 'list-error', 'Error reading folder', dir, err.message));
+                                return 0;
+                            }).filter(function(file) {
+                                //Remove potentially problamatic entries
+                                return (['/webdav', dir, '.', '..', null, ''].indexOf(file.filename) == -1);
+                            });
+
+                            if (contents.length === 0) {
+                                search_reply.push(error_result(search_reply, 'empty-folder', 'This folder is empty', dir, '', 'Empty Folder'));
                                 search_reply.finished();
                             }
                             else {
-                                var paths = contents.sort().map(function(file) {
-                                    return path.join(dir, file);
-                                }).filter(function(file) {
-                                    //Remove potentially problamatic entries
-                                    return (['/webdav', dir, '.', '..', null, ''].indexOf(file) == -1);
-                                });
+                                for (var index in contents) {
+                                    var file = contents[index];
 
-                                if (paths.length === 0) {
-                                    search_reply.push(error_result(search_reply, 'empty-folder', 'This folder is empty', dir, '', 'Empty Folder'));
-                                    search_reply.finished();
-                                }
-                                else {
-                                    //TODO see if we can get this from usings the webdav-fs client (with the dir read) - https://github.com/perry-mitchell/webdav-fs/blob/master/source/client.js#L119
-                                    async.map(paths, function(path, callback) {
-                                        connection.stat(path, function(err, stat) {
-                                            if (err) { //TODO make this a success then put an error result in the results
-                                                console.warn('error stating file', path, err);
+                                    if (file) {
+                                        if (file.type == 'file') {
+                                            var file_result = new scopes.lib.CategorisedResult(file_category);
+                                            file_result.set_uri(file.filename);
+                                            file_result.set_title(path.basename(file.filename));
+                                            file_result.set('file', true);
+                                            file_result.set('path', file.filename);
+                                            file_result.set('mtime', moment(new Date(file.lastmod)).fromNow());
+                                            file_result.set('size', nice_bytes(file.size));
+                                            file_result.set('mime', JSON.stringify(file.mime));
+
+                                            var ext = path.extname(file.filename);
+                                            //TODO do this checking based on mimetype
+                                            if (text_files.indexOf(ext) >= 0) {
+                                                file_result.set_art(path.join(scope.scope_directory, 'file_text.png'));
+                                            }
+                                            else if (doc_files.indexOf(ext) >= 0) {
+                                                file_result.set_art(path.join(scope.scope_directory, 'file_doc.png'));
+                                            }
+                                            else if (image_files.indexOf(ext) >= 0) {
+                                                file_result.set_art(path.join(scope.scope_directory, 'file_image.png'));
+                                            }
+                                            else if (video_files.indexOf(ext) >= 0) {
+                                                file_result.set_art(path.join(scope.scope_directory, 'file_movie.png'));
+                                            }
+                                            else if (audio_files.indexOf(ext) >= 0) {
+                                                file_result.set_art(path.join(scope.scope_directory, 'file_sound.png'));
+                                            }
+                                            else if (archive_files.indexOf(ext) >= 0) {
+                                                file_result.set_art(path.join(scope.scope_directory, 'file_zip.png'));
+                                            }
+                                            else if (pdf_files.indexOf(ext) >= 0) {
+                                                file_result.set_art(path.join(scope.scope_directory, 'file_pdf.png'));
+                                            }
+                                            else if (code_files.indexOf(ext) >= 0) {
+                                                file_result.set_art(path.join(scope.scope_directory, 'file_code.png'));
+                                            }
+                                            else if (powerpoint_files.indexOf(ext) >= 0) {
+                                                file_result.set_art(path.join(scope.scope_directory, 'file_ppt.png'));
+                                            }
+                                            else if (spreadsheet_files.indexOf(ext) >= 0) {
+                                                file_result.set_art(path.join(scope.scope_directory, 'file_xls.png'));
+                                            }
+                                            else {
+                                                file_result.set_art(path.join(scope.scope_directory, 'file.png'));
                                             }
 
-                                            callback(err, {
-                                                path: path,
-                                                stat: stat,
-                                            });
-                                        });
-                                    },
-                                    function(err, results) {
-                                        if (err) {
-                                            console.warn('error stating files', err);
-
-                                            search_reply.push(error_result(search_reply, 'stat-error', 'Error listing files', '', err.message));
-                                            search_reply.finished();
+                                            search_reply.push(file_result);
                                         }
                                         else {
-                                            //Loop over folders first for consistency
-                                            for (var index in results) {
-                                                var file = results[index];
+                                            var folder_result = new scopes.lib.CategorisedResult(folder_category);
+                                            folder_result.set_uri('scope://owncloud-files-scope.bhdouglass_owncloud-files?q=' + file.filename);
+                                            folder_result.set_title(path.basename(file.filename));
+                                            folder_result.set('file', false);
+                                            folder_result.set('path', file.filename);
+                                            folder_result.set('mtime', moment(new Date(file.lastmod)).fromNow());
+                                            folder_result.set_intercept_activation();
+                                            folder_result.set_art(path.join(scope.scope_directory, 'folder.png'));
 
-                                                if (file && file.stat && !file.stat.isFile()) {
-                                                    var folder_result = new scopes.lib.CategorisedResult(folder_category);
-                                                    folder_result.set_uri('scope://owncloud-files-scope.bhdouglass_owncloud-files?q=' + file.path);
-                                                    folder_result.set_title(path.basename(file.path));
-                                                    folder_result.set('file', false);
-                                                    folder_result.set('path', file.path);
-                                                    folder_result.set('mtime', moment(file.stat.mtime).fromNow());
-                                                    folder_result.set_intercept_activation();
-                                                    folder_result.set_art(path.join(scope.scope_directory, 'folder.png'));
-
-                                                    search_reply.push(folder_result);
-                                                }
-                                            }
-
-                                            for (var index in results) {
-                                                var file = results[index];
-
-                                                if (file && file.stat && file.stat.isFile()) {
-                                                    var file_result = new scopes.lib.CategorisedResult(file_category);
-                                                    file_result.set_uri(file.path);
-                                                    file_result.set_title(path.basename(file.path));
-                                                    file_result.set('file', true);
-                                                    file_result.set('path', file.path);
-                                                    file_result.set('mtime', moment(file.stat.mtime).fromNow());
-
-                                                    var ext = path.extname(file.path);
-                                                    if (text_files.indexOf(ext) >= 0) {
-                                                        file_result.set_art(path.join(scope.scope_directory, 'file_text.png'));
-                                                    }
-                                                    else if (doc_files.indexOf(ext) >= 0) {
-                                                        file_result.set_art(path.join(scope.scope_directory, 'file_doc.png'));
-                                                    }
-                                                    else if (image_files.indexOf(ext) >= 0) {
-                                                        file_result.set_art(path.join(scope.scope_directory, 'file_image.png'));
-                                                    }
-                                                    else if (video_files.indexOf(ext) >= 0) {
-                                                        file_result.set_art(path.join(scope.scope_directory, 'file_movie.png'));
-                                                    }
-                                                    else if (audio_files.indexOf(ext) >= 0) {
-                                                        file_result.set_art(path.join(scope.scope_directory, 'file_sound.png'));
-                                                    }
-                                                    else if (archive_files.indexOf(ext) >= 0) {
-                                                        file_result.set_art(path.join(scope.scope_directory, 'file_zip.png'));
-                                                    }
-                                                    else if (pdf_files.indexOf(ext) >= 0) {
-                                                        file_result.set_art(path.join(scope.scope_directory, 'file_pdf.png'));
-                                                    }
-                                                    else if (code_files.indexOf(ext) >= 0) {
-                                                        file_result.set_art(path.join(scope.scope_directory, 'file_code.png'));
-                                                    }
-                                                    else if (ppt_files.indexOf(ext) >= 0) {
-                                                        file_result.set_art(path.join(scope.scope_directory, 'file_ppt.png'));
-                                                    }
-                                                    else if (code_xls.indexOf(ext) >= 0) {
-                                                        file_result.set_art(path.join(scope.scope_directory, 'file_xls.png'));
-                                                    }
-                                                    else {
-                                                        file_result.set_art(path.join(scope.scope_directory, 'file.png'));
-                                                    }
-
-                                                    search_reply.push(file_result);
-                                                }
-                                            }
+                                            search_reply.push(folder_result);
                                         }
-
-                                        console.log('finished searching');
-                                        search_reply.finished();
-                                    });
+                                    }
                                 }
+
+                                console.log('finished searching');
+                                search_reply.finished();
                             }
+                        })
+                        .catch(function(err) {
+                            console.warn('error reading dir', qs, err.message);
+
+                            search_reply.push(error_result(search_reply, 'list-error', 'Error reading folder', dir, err.message));
+                            search_reply.finished();
                         });
                     }
                     else { //No connection put an error result
@@ -280,9 +312,27 @@ scope.initialize(
                         var mtime = new scopes.lib.PreviewWidget('mtime', 'text');
                         mtime.add_attribute_value('text', 'Last Modified: ' + result.get('mtime'));
 
-                        //TODO download button (just a url)
-
                         preview_reply.push([image, header, mtime]);
+
+                        if (result.get('size')) {
+                            var size = new scopes.lib.PreviewWidget('size', 'text');
+                            size.add_attribute_value('text', 'File Size: ' + result.get('size'));
+
+                            preview_reply.push([size]);
+                        }
+
+                        if (result.get('file')) {
+                            var download = new scopes.lib.PreviewWidget('actions', 'actions');
+                            download.add_attribute_value('actions',[
+                                {
+                                    id: 'download',
+                                    label: 'Download',
+                                    uri: path.join(endpoint.url, result.get('path')),
+                                }
+                            ]);
+
+                            preview_reply.push([download]);
+                        }
                     }
 
                     preview_reply.finished();
@@ -291,6 +341,7 @@ scope.initialize(
             );
         },
         activate: function(result, metadata) {
+            //Force the url dispatcher to take care of things
             console.log('activate');
 
             return new scopes.lib.ActivationQuery(
@@ -299,14 +350,27 @@ scope.initialize(
                 '',
                 '',
                 function activate_run() {
-                    console.log('Activate called');
-
                     return new scopes.lib.ActivationResponse(
                         scopes.defs.ActivationResponseStatus.NotHandled
                         //new scopes.lib.CannedQuery(scope_id, result.get('path'), '')
                     );
                 },
                 function activate_cancelled() {}
+            );
+        },
+        perform_action: function(result, metadata, widget_id, action_id) {
+            //Force the url dispatcher to take care of things
+            console.log('perform action', widget_id, action_id);
+
+            return new scopes.lib.ActivationQuery(
+                result,
+                metadata,
+                widget_id,
+                action_id,
+                function perform_action_run() {
+                    return new scopes.lib.ActivationResponse(scopes.defs.ActivationResponseStatus.NotHandled);
+                },
+                function perform_action_cancelled() {}
             );
         }
     }
