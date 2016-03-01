@@ -1,7 +1,7 @@
 {
     "architecture": "@CLICK_ARCH@",
     "description": "An unofficial ownCloud file browsing scope",
-    "framework": "ubuntu-sdk-15.04.4",
+    "framework": "ubuntu-sdk-15.04.3",
     "hooks": {
         "owncloud-files": {
             "apparmor": "owncloud-files.apparmor",
@@ -11,5 +11,5 @@
     "maintainer": "Brian Douglass <bhdouglass@gmail.com>",
     "name": "owncloud-files-scope.bhdouglass",
     "title": "owncloud-files-scope",
-    "version": "1.2"
+    "version": "1.3"
 }

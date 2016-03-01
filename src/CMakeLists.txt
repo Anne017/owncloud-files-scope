@@ -97,6 +97,21 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/${SCOPE_NAME}.js"
   @ONLY COPYONLY
 )
+configure_file(
+  "filetypes.js"
+  "${CMAKE_CURRENT_BINARY_DIR}/filetypes.js"
+  @ONLY COPYONLY
+)
+configure_file(
+  "utils.js"
+  "${CMAKE_CURRENT_BINARY_DIR}/utils.js"
+  @ONLY COPYONLY
+)
+configure_file(
+  "webdav.js"
+  "${CMAKE_CURRENT_BINARY_DIR}/webdav.js"
+  @ONLY COPYONLY
+)
 
 add_custom_target(
   copy_modules ALL
@@ -127,6 +142,9 @@ install(
     "${CMAKE_CURRENT_BINARY_DIR}/file_ppt.png"
     "${CMAKE_CURRENT_BINARY_DIR}/file_xls.png"
     "${CMAKE_CURRENT_BINARY_DIR}/${SCOPE_NAME}.js"
+    "${CMAKE_CURRENT_BINARY_DIR}/filetypes.js"
+    "${CMAKE_CURRENT_BINARY_DIR}/utils.js"
+    "${CMAKE_CURRENT_BINARY_DIR}/webdav.js"
   DESTINATION
     ${SCOPE_INSTALL_DIR}
 )

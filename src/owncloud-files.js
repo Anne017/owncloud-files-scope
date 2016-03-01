@@ -1,21 +1,12 @@
 var moment = require('moment');
 var path = require('path');
-var webdav = require('webdav-fs/source/client');
+var webdav = require('./webdav');
+var utils = require('./utils');
+var filetypes = require('./filetypes');
 var scopes = require('unity-js-scopes');
 var scope = scopes.self; //convenience
 
-var text_files = ['.txt', '.rst', '.md', '.csv', '.ini'];
-var doc_files = ['.doc', '.docx', '.rtf', '.odt'];
-var image_files = ['.jpg', '.jpeg', '.jfif', '.exif', '.tiff', '.gif', '.bmp', '.png', '.ppm', '.pgm', '.pbm', '.pnm', '.webp', '.svg', '.ai'];
-var video_files = ['.webm', '.mkv', '.flv', '.vob', '.ogv', '.gifv', '.avi', '.mov', '.wmv', '.mp4', '.m4p', '.m4v', '.mpg', '.mp2', '.mpeg', '.mpe', '.mpv', '.m2v', '.m4v', '.3gp', '.3g2'];
-var audio_files = ['.wav', '.flac', '.m4a', '.wma', '.ast', '.aac', '.ogg', '.mp3'];
-var archive_files = ['.7z', '.bz2', '.deb', '.click', '.rpm', '.gz', '.bz', '.lz', '.tar', '.tgz', '.ar', '.iso', '.lzma', '.xz'];
-var pdf_files = ['.pdf'];
-var code_files = ['.js', '.c', '.cpp', '.h', '.hpp', '.java', '.php', '.html', '.css', '.less', '.scss', 'xml', '.xhtml', '.node', '.py', '.go', '.lisp', '.m', '.pl', '.r', '.rb', '.cs', '.swift', '.sql', '.sh'];
-var powerpoint_files = ['.ppt', '.pptx', '.odp'];
-var spreadsheet_files = ['.xls', '.xlsx', '.ods'];
-
-var TEMPLATE = {
+var TEMPLATE = JSON.stringify({
     'schema-version': 1,
     'template': {
         'category-layout': 'grid',
@@ -27,9 +18,9 @@ var TEMPLATE = {
             'field': 'art',
         },
     },
-};
+});
 
-var ERROR_TEMPLATE = {
+var ERROR_TEMPLATE = JSON.stringify({
     'schema-version': 1,
     'template': {
         'category-layout': 'grid',
@@ -42,42 +33,13 @@ var ERROR_TEMPLATE = {
         },
         'subtitle': 'subtitle',
     },
-};
-
-function nice_bytes(bytes) {
-    var unit = 'B';
-
-    if (!bytes) {
-        bytes = 0;
-    }
-    else if (bytes > 1024) {
-        bytes /= 1024;
-        unit = 'KB';
-
-        if (bytes > 1024) {
-            bytes /= 1024;
-            unit = 'MB';
-
-            if (bytes > 1024) {
-                bytes /= 1024;
-                unit = 'GB';
-
-                if (bytes > 1024) {
-                    bytes /= 1024;
-                    unit = 'TB';
-                }
-            }
-        }
-    }
-
-    return bytes.toFixed(1) + ' ' + unit;
-}
+});
 
 function error_result(search_reply, id, title, subtitle, error_message, category_title) {
     category_title = category_title ? category_title : 'error';
     var category_id = category_title.replace(' ', '-').toLowerCase();
 
-    var category_renderer = new scopes.lib.CategoryRenderer(JSON.stringify(ERROR_TEMPLATE));
+    var category_renderer = new scopes.lib.CategoryRenderer(ERROR_TEMPLATE);
     var category = search_reply.register_category(category_id, category_title, '', category_renderer);
 
     var result = new scopes.lib.CategorisedResult(category);
@@ -102,60 +64,28 @@ var endpoint = {
     password: '',
 };
 
-function setup_endpoint() {
-    var url = scope.settings.url ? scope.settings.url.get_string() : '';
-    if (url) {
-        if (url.toLowerCase().indexOf('http://') !== 0 && url.toLowerCase().indexOf('https://') !== 0) {
-            url = 'http://' + url;
-        }
-
-        if (url.indexOf('/remote.php/webdav') == -1) {
-            if (url[url.length - 1] === '/') {
-                url = url.substring(0, url.length - 1);
-            }
-
-            url += '/remote.php/webdav';
-        }
-    }
-
-    var username = scope.settings.username ? scope.settings.username.get_string() : '';
-    var password = scope.settings.password ? scope.settings.password.get_string() : '';
-
-    //Borrowed from https://github.com/perry-mitchell/webdav-fs/blob/master/source/index.js#L22
-    var accessURL = (username.length > 0) ? url.replace(/(https?:\/\/)/i, "$1" + username + ":" + password + "@") : url;
-    if (accessURL[accessURL.length - 1] !== '/') {
-        accessURL += '/';
-    }
-
-    endpoint = {
-        url: accessURL,
-        username: username,
-        password: password
-    };
-}
-
 scope.initialize(
     {}, //options
     {
         run: function scope_run() {
-            console.log('owncloud file scope running');
+            utils.log('running');
         },
         start: function scope_start(id) {
-            console.log('owncloud file scope starting up', id);
+            utils.log('starting (' + id + ')');
             scope_id = id;
         },
         search: function scope_search(canned_query, metadata) {
-            setup_endpoint();
+            endpoint = utils.setup_endpoint(scope);
 
             return new scopes.lib.SearchQuery(
                 canned_query,
                 metadata,
                 function query_run(search_reply) { //TODO departments based on file types (do this after mimetype checking)
                     var qs = canned_query.query_string();
-                    console.log('search', qs);
+                    utils.log('search: ' + qs);
 
                     if (endpoint.url) {
-                        var category_renderer = new scopes.lib.CategoryRenderer(JSON.stringify(TEMPLATE));
+                        var category_renderer = new scopes.lib.CategoryRenderer(TEMPLATE);
                         var file_category = search_reply.register_category('files', 'Files', '', category_renderer);
                         var folder_category = search_reply.register_category('folders', 'Folders', '', category_renderer);
 
@@ -178,7 +108,7 @@ scope.initialize(
                             search_reply.push(parent_result);
                         }
 
-                        webdav.getDir(endpoint, dir).then(function(contents, b) {
+                        webdav.getDir(endpoint, dir).then(function(contents, res) {
                             var contents = contents.sort(function(a, b) {
                                 if (a.type == 'file' && b.type == 'folder') {
                                     return -1;
@@ -200,6 +130,8 @@ scope.initialize(
                             });
 
                             if (contents.length === 0) {
+                                utils.warn('empty folder');
+
                                 search_reply.push(error_result(search_reply, 'empty-folder', 'This folder is empty', dir, '', 'Empty Folder'));
                                 search_reply.finished();
                             }
@@ -215,39 +147,39 @@ scope.initialize(
                                             file_result.set('file', true);
                                             file_result.set('path', file.filename);
                                             file_result.set('mtime', moment(new Date(file.lastmod)).fromNow());
-                                            file_result.set('size', nice_bytes(file.size));
+                                            file_result.set('size', utils.nice_bytes(file.size));
                                             file_result.set('mime', JSON.stringify(file.mime));
 
                                             var ext = path.extname(file.filename);
                                             //TODO do this checking based on mimetype
-                                            if (text_files.indexOf(ext) >= 0) {
+                                            if (filetypes.text.indexOf(ext) >= 0) {
                                                 file_result.set_art(path.join(scope.scope_directory, 'file_text.png'));
                                             }
-                                            else if (doc_files.indexOf(ext) >= 0) {
+                                            else if (filetypes.doc.indexOf(ext) >= 0) {
                                                 file_result.set_art(path.join(scope.scope_directory, 'file_doc.png'));
                                             }
-                                            else if (image_files.indexOf(ext) >= 0) {
+                                            else if (filetypes.image.indexOf(ext) >= 0) {
                                                 file_result.set_art(path.join(scope.scope_directory, 'file_image.png'));
                                             }
-                                            else if (video_files.indexOf(ext) >= 0) {
+                                            else if (filetypes.video.indexOf(ext) >= 0) {
                                                 file_result.set_art(path.join(scope.scope_directory, 'file_movie.png'));
                                             }
-                                            else if (audio_files.indexOf(ext) >= 0) {
+                                            else if (filetypes.audio.indexOf(ext) >= 0) {
                                                 file_result.set_art(path.join(scope.scope_directory, 'file_sound.png'));
                                             }
-                                            else if (archive_files.indexOf(ext) >= 0) {
+                                            else if (filetypes.archive.indexOf(ext) >= 0) {
                                                 file_result.set_art(path.join(scope.scope_directory, 'file_zip.png'));
                                             }
-                                            else if (pdf_files.indexOf(ext) >= 0) {
+                                            else if (filetypes.pdf.indexOf(ext) >= 0) {
                                                 file_result.set_art(path.join(scope.scope_directory, 'file_pdf.png'));
                                             }
-                                            else if (code_files.indexOf(ext) >= 0) {
+                                            else if (filetypes.code.indexOf(ext) >= 0) {
                                                 file_result.set_art(path.join(scope.scope_directory, 'file_code.png'));
                                             }
-                                            else if (powerpoint_files.indexOf(ext) >= 0) {
+                                            else if (filetypes.powerpoint.indexOf(ext) >= 0) {
                                                 file_result.set_art(path.join(scope.scope_directory, 'file_ppt.png'));
                                             }
-                                            else if (spreadsheet_files.indexOf(ext) >= 0) {
+                                            else if (filetypes.spreadsheet.indexOf(ext) >= 0) {
                                                 file_result.set_art(path.join(scope.scope_directory, 'file_xls.png'));
                                             }
                                             else {
@@ -271,14 +203,23 @@ scope.initialize(
                                     }
                                 }
 
-                                console.log('finished searching');
+                                utils.log('finished searching');
                                 search_reply.finished();
                             }
                         })
                         .catch(function(err) {
-                            console.warn('error reading dir', qs, err.message);
+                            utils.error('error reading dir: ' + err.message);
 
-                            search_reply.push(error_result(search_reply, 'list-error', 'Error reading folder', dir, err.message));
+                            if (err.code == 401) {
+                                search_reply.push(error_result(search_reply, 'unauthorized', 'You are not properly logged in', 'Check the settings', err.message));
+                            }
+                            else if (err.code == 403) {
+                                search_reply.push(error_result(search_reply, 'forbidden', 'You do not have access to this folder', dir, err.message));
+                            }
+                            else {
+                                search_reply.push(error_result(search_reply, 'list-error', 'Error reading folder', dir, err.message));
+                            }
+
                             search_reply.finished();
                         });
                     }
@@ -304,7 +245,7 @@ scope.initialize(
                         error_header.add_attribute_mapping('subtitle', 'subtitle');
 
                         var message = new scopes.lib.PreviewWidget('message', 'text');
-                        message.add_attribute_value('text', result.get('message'));
+                        message.add_attribute_value('text', 'Error Message: ' + result.get('message'));
 
                         preview_reply.push([error_image, error_header, message]);
                     }
@@ -355,7 +296,7 @@ scope.initialize(
         },
         activate: function(result, metadata) {
             //Force the url dispatcher to take care of things
-            console.log('activate');
+            utils.log('activating: ' + result.uri());
 
             return new scopes.lib.ActivationQuery(
                 result,
@@ -373,7 +314,7 @@ scope.initialize(
         },
         perform_action: function(result, metadata, widget_id, action_id) {
             //Force the url dispatcher to take care of things
-            console.log('perform action', widget_id, action_id);
+            utils.log('performing action: ' + action_id);
 
             return new scopes.lib.ActivationQuery(
                 result,
