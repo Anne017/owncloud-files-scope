@@ -104,7 +104,18 @@ function sanitiseRemotePath(path) {
     if (path[0] === '/') {
         path = path.substr(1);
     }
-    return encodeURI(path.trim());
+
+    var parts = path.split('/');
+    path = '';
+    for (var index in parts) {
+        if (path.length > 0) {
+            path += '/';
+        }
+
+        path += encodeURIComponent(parts[index]);
+    }
+
+    return path;
 }
 
 module.exports = {
