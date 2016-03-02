@@ -52,8 +52,6 @@ function setup_endpoint(scope) {
         access_url += '/';
     }
 
-    console.log(access_url);
-
     return {
         url: access_url,
         username: username,
