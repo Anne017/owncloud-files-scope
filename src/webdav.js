@@ -1,5 +1,7 @@
 //This is a 'fork' of the webdav-fs module's client code (https://github.com/perry-mitchell/webdav-fs/blob/master/source/client.js)
 
+var utils = require('./utils');
+
 var fetch = require('node-fetch');
 var xml2js = require('xml2js');
 var querystring = require('querystring');
@@ -43,7 +45,7 @@ function processDirectoryResult(path, dirResult, targetOnly) {
         var filename = processDirectoryResultFilename(
                 path,
                 processXMLStringValue(responseBro.iCanHaz1('d:href', 'D:href'))
-            ).trim(),
+            ),
             resourceType = processXMLStringValue(propsBro.iCanHaz1('d:resourcetype', 'D:resourcetype')),
             itemType = (resourceType.indexOf('d:collection') >= 0 || resourceType.indexOf('D:collection') >= 0) ?
                 'directory' : 'file';
@@ -72,6 +74,9 @@ function processDirectoryResult(path, dirResult, targetOnly) {
 }
 
 function processDirectoryResultFilename(path, resultFilename) {
+    path = decodeURIComponent(path);
+    resultFilename = decodeURIComponent(resultFilename);
+
     var resultFLen = resultFilename.length;
     if (resultFilename[resultFLen - 1] === '/') {
         resultFilename = resultFilename.substr(0, resultFLen - 1);
@@ -100,19 +105,13 @@ function processXMLStringValue(xmlVal) {
     return '';
 }
 
-function sanitiseRemotePath(path) {
-    if (path[0] === '/') {
-        path = path.substr(1);
-    }
-    return encodeURI(path.trim());
-}
-
 module.exports = {
     getDir: function(auth, path) {
-        path = sanitiseRemotePath(path);
+        path = utils.sanitize_path(path);
         if (path.length <= 0) {
             path = '/';
         }
+
         return fetch(auth.url + path, {
             method: 'PROPFIND',
             headers: {
@@ -135,6 +134,17 @@ module.exports = {
                     code: 403,
                     response: res,
                 }
+            }
+            else if (res.status == 404) {
+                throw {
+                    name: 'Not Found',
+                    message: 'The folder you are trying to access does not exist',
+                    code: 404,
+                    response: res,
+                }
+            }
+            else if (res.status < 200 || res.status > 299) {
+                utils.warn('Non-OK response (' + res.status + '): ' + JSON.stringify(res));
             }
 
             return res.text();

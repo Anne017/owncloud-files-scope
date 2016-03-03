@@ -59,6 +59,20 @@ function setup_endpoint(scope) {
     };
 }
 
+function sanitize_path(path) {
+    var parts = path.split('/');
+    path = '';
+    for (var index in parts) {
+        if (path.length > 0) {
+            path += '/';
+        }
+
+        path += encodeURIComponent(parts[index]);
+    }
+
+    return path;
+}
+
 function log(message) {
     console.log('ownCloud-files-scope.bhdouglass LOG:', message);
 }
@@ -74,6 +88,7 @@ function error(message) {
 module.exports = {
     nice_bytes: nice_bytes,
     setup_endpoint: setup_endpoint,
+    sanitize_path: sanitize_path,
     log: log,
     warn: warn,
     error: error,

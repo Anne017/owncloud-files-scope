@@ -98,7 +98,7 @@ scope.initialize(
                             var parent = path.normalize(path.join(dir, '..'));
 
                             var parent_result = new scopes.lib.CategorisedResult(folder_category);
-                            parent_result.set_uri('scope://owncloud-files-scope.bhdouglass_owncloud-files?q=' + parent);
+                            parent_result.set_uri('scope://owncloud-files-scope.bhdouglass_owncloud-files?q=/' + utils.sanitize_path(parent));
                             parent_result.set_title('Parent Folder');
                             parent_result.set('file', false);
                             parent_result.set('path', parent);
@@ -190,7 +190,7 @@ scope.initialize(
                                         }
                                         else {
                                             var folder_result = new scopes.lib.CategorisedResult(folder_category);
-                                            folder_result.set_uri('scope://owncloud-files-scope.bhdouglass_owncloud-files?q=' + file.filename);
+                                            folder_result.set_uri('scope://owncloud-files-scope.bhdouglass_owncloud-files?q=/' + utils.sanitize_path(file.filename));
                                             folder_result.set_title(path.basename(file.filename));
                                             folder_result.set('file', false);
                                             folder_result.set('path', file.filename);
@@ -215,6 +215,9 @@ scope.initialize(
                             }
                             else if (err.code == 403) {
                                 search_reply.push(error_result(search_reply, 'forbidden', 'You do not have access to this folder', dir, err.message));
+                            }
+                            else if (err.code == 404) {
+                                search_reply.push(error_result(search_reply, 'not-found', 'Folder not found', dir, err.message));
                             }
                             else {
                                 search_reply.push(error_result(search_reply, 'list-error', 'Error reading folder', dir, err.message));

@@ -221,7 +221,9 @@ var ActivationResponseStatus = {
     ShowDash: 1,
     HideDash: 2,
     ShowPreview: 3,
-    PerformQuery: 4
+    PerformQuery: 4,
+    UpdateResult: 5,
+    UpdatePreview: 6
 };
 
 module.exports = {
