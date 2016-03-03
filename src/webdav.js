@@ -1,6 +1,8 @@
 //This is a 'fork' of the webdav-fs module's client code (https://github.com/perry-mitchell/webdav-fs/blob/master/source/client.js)
 
 var utils = require('./utils');
+var translations = require('./translations');
+var _ = translations._;
 
 var fetch = require('node-fetch');
 var xml2js = require('xml2js');
@@ -122,7 +124,7 @@ module.exports = {
             if (res.status == 401) {
                 throw {
                     name: 'Unauthorized',
-                    message: 'You do not have access to this service',
+                    message: _('You do not have access to this service'),
                     code: 401,
                     response: res,
                 }
@@ -130,7 +132,7 @@ module.exports = {
             else if (res.status == 403) {
                 throw {
                     name: 'Forbidden',
-                    message: 'You are not allowed to access this',
+                    message: _('You are not allowed to access this'),
                     code: 403,
                     response: res,
                 }
@@ -138,7 +140,7 @@ module.exports = {
             else if (res.status == 404) {
                 throw {
                     name: 'Not Found',
-                    message: 'The folder you are trying to access does not exist',
+                    message: _('The folder you are trying to access does not exist'),
                     code: 404,
                     response: res,
                 }

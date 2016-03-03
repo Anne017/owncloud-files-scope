@@ -1,8 +1,12 @@
 var moment = require('moment');
 var path = require('path');
+
 var webdav = require('./webdav');
 var utils = require('./utils');
 var filetypes = require('./filetypes');
+var translations = require('./translations');
+var _ = translations._;
+
 var scopes = require('unity-js-scopes');
 var scope = scopes.self; //convenience
 
@@ -86,8 +90,8 @@ scope.initialize(
 
                     if (endpoint.url) {
                         var category_renderer = new scopes.lib.CategoryRenderer(TEMPLATE);
-                        var file_category = search_reply.register_category('files', 'Files', '', category_renderer);
-                        var folder_category = search_reply.register_category('folders', 'Folders', '', category_renderer);
+                        var file_category = search_reply.register_category('files', _('Files'), '', category_renderer);
+                        var folder_category = search_reply.register_category('folders', _('Folders'), '', category_renderer);
 
                         var dir = qs || '/';
                         if (dir.charAt(0) != '/') {
@@ -99,7 +103,7 @@ scope.initialize(
 
                             var parent_result = new scopes.lib.CategorisedResult(folder_category);
                             parent_result.set_uri('scope://owncloud-files-scope.bhdouglass_owncloud-files?q=/' + utils.sanitize_path(parent));
-                            parent_result.set_title('Parent Folder');
+                            parent_result.set_title(_('Parent Folder'));
                             parent_result.set('file', false);
                             parent_result.set('path', parent);
                             parent_result.set_intercept_activation();
@@ -132,7 +136,7 @@ scope.initialize(
                             if (contents.length === 0) {
                                 utils.warn('empty folder');
 
-                                search_reply.push(error_result(search_reply, 'empty-folder', 'This folder is empty', dir, '', 'Empty Folder'));
+                                search_reply.push(error_result(search_reply, 'empty-folder', _('This folder is empty'), dir, '', _('Empty Folder')));
                                 search_reply.finished();
                             }
                             else {
@@ -211,23 +215,23 @@ scope.initialize(
                             utils.error('error reading dir: ' + err.message);
 
                             if (err.code == 401) {
-                                search_reply.push(error_result(search_reply, 'unauthorized', 'You are not properly logged in', 'Check the settings', err.message));
+                                search_reply.push(error_result(search_reply, 'unauthorized', _('You are not properly logged in'), _('Check the settings'), err.message));
                             }
                             else if (err.code == 403) {
-                                search_reply.push(error_result(search_reply, 'forbidden', 'You do not have access to this folder', dir, err.message));
+                                search_reply.push(error_result(search_reply, 'forbidden', _('You do not have access to this folder'), dir, err.message));
                             }
                             else if (err.code == 404) {
-                                search_reply.push(error_result(search_reply, 'not-found', 'Folder not found', dir, err.message));
+                                search_reply.push(error_result(search_reply, 'not-found', _('Folder not found'), dir, err.message));
                             }
                             else {
-                                search_reply.push(error_result(search_reply, 'list-error', 'Error reading folder', dir, err.message));
+                                search_reply.push(error_result(search_reply, 'list-error', _('Error reading folder'), dir, err.message));
                             }
 
                             search_reply.finished();
                         });
                     }
                     else { //No connection put an error result
-                        search_reply.push(error_result(search_reply, 'no-connection', 'No connection to ownCloud', 'Check the scope settings'));
+                        search_reply.push(error_result(search_reply, 'no-connection', _('No connection to ownCloud'), _('Check the scope settings')));
                         search_reply.finished();
                     }
                 },
@@ -248,7 +252,7 @@ scope.initialize(
                         error_header.add_attribute_mapping('subtitle', 'subtitle');
 
                         var message = new scopes.lib.PreviewWidget('message', 'text');
-                        message.add_attribute_value('text', 'Error Message: ' + result.get('message'));
+                        message.add_attribute_value('text', _('Error Message') + ': ' + result.get('message'));
 
                         preview_reply.push([error_image, error_header, message]);
                     }
@@ -261,13 +265,13 @@ scope.initialize(
                         header.add_attribute_value('subtitle', path.dirname(result.get('path')));
 
                         var mtime = new scopes.lib.PreviewWidget('mtime', 'text');
-                        mtime.add_attribute_value('text', 'Last Modified: ' + result.get('mtime'));
+                        mtime.add_attribute_value('text', _('Last Modified') + ': ' + result.get('mtime'));
 
                         preview_reply.push([image, header, mtime]);
 
                         if (result.get('size')) {
                             var size = new scopes.lib.PreviewWidget('size', 'text');
-                            size.add_attribute_value('text', 'File Size: ' + result.get('size'));
+                            size.add_attribute_value('text', _('File Size') + ': ' + result.get('size'));
 
                             preview_reply.push([size]);
                         }
@@ -283,7 +287,7 @@ scope.initialize(
                             download.add_attribute_value('actions',[
                                 {
                                     id: 'download',
-                                    label: 'Download',
+                                    label: _('Download'),
                                     uri: urlpath,
                                 }
                             ]);

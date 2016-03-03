@@ -112,6 +112,11 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/webdav.js"
   @ONLY COPYONLY
 )
+configure_file(
+  "translations.js"
+  "${CMAKE_CURRENT_BINARY_DIR}/translations.js"
+  @ONLY COPYONLY
+)
 
 add_custom_target(
   copy_modules ALL
@@ -145,6 +150,7 @@ install(
     "${CMAKE_CURRENT_BINARY_DIR}/filetypes.js"
     "${CMAKE_CURRENT_BINARY_DIR}/utils.js"
     "${CMAKE_CURRENT_BINARY_DIR}/webdav.js"
+    "${CMAKE_CURRENT_BINARY_DIR}/translations.js"
   DESTINATION
     ${SCOPE_INSTALL_DIR}
 )
