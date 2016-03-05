@@ -9,3 +9,8 @@ _displayName=Your ownCloud username
 [password]
 type=string
 _displayName=Your ownCloud password (caution: this is not save securely)
+
+[hide_dot]
+type=boolean
+defaultValue=true
+_displayName=Hide dot files and folders

@@ -114,11 +114,11 @@ scope.initialize(
 
                         webdav.getDir(endpoint, dir).then(function(contents, res) {
                             var contents = contents.sort(function(a, b) {
-                                if (a.type == 'file' && b.type == 'folder') {
-                                    return -1;
-                                }
-                                else if (a.type == 'folder' && b.type == 'file') {
+                                if (a.type == 'file' && b.type == 'directory') {
                                     return 1;
+                                }
+                                else if (a.type == 'directory' && b.type == 'file') {
+                                    return -1;
                                 }
                                 else if (a.filename < b.filename) {
                                     return -1;
@@ -140,10 +140,16 @@ scope.initialize(
                                 search_reply.finished();
                             }
                             else {
+                                var hide_dot = (scope.settings.hide_dot === undefined) ? true : scope.settings.hide_dot.get_bool();
+
                                 for (var index in contents) {
                                     var file = contents[index];
 
                                     if (file) {
+                                        if (hide_dot && path.basename(file.filename).charAt(0) == '.') {
+                                            continue;
+                                        }
+                                        else { //TODO indent
                                         if (file.type == 'file') {
                                             var file_result = new scopes.lib.CategorisedResult(file_category);
                                             file_result.set_uri(file.filename);
@@ -203,6 +209,7 @@ scope.initialize(
                                             folder_result.set_art(path.join(scope.scope_directory, 'folder.png'));
 
                                             search_reply.push(folder_result);
+                                        }
                                         }
                                     }
                                 }
