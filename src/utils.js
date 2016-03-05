@@ -82,6 +82,17 @@ function download_link(base, path) {
     return url + path;
 }
 
+//Borrowed from http://stackoverflow.com/a/6274381
+function shuffle(a) {
+    var j, x, i;
+    for (i = a.length; i; i -= 1) {
+        j = Math.floor(Math.random() * i);
+        x = a[i - 1];
+        a[i - 1] = a[j];
+        a[j] = x;
+    }
+}
+
 function log(message) {
     console.log('ownCloud-files-scope.bhdouglass LOG:', message);
 }
@@ -99,6 +110,7 @@ module.exports = {
     setup_endpoint: setup_endpoint,
     sanitize_path: sanitize_path,
     download_link: download_link,
+    shuffle: shuffle,
     log: log,
     warn: warn,
     error: error,

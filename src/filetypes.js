@@ -12,13 +12,18 @@ module.exports = {
     image: [
         '.jfif', '.exif', '.webp', '.ai','.tiff'
     ],
+    preview_video: [
+        '.mkv', '.avi', '.mp4'
+    ],
     video: [
-        '.webm', '.mkv', '.flv', '.vob', '.ogv', '.gifv', '.avi', '.mov', '.wmv',
-        '.mp4', '.m4p', '.m4v', '.mpg', '.mp2', '.mpeg', '.mpe', '.mpv', '.m2v',
-        '.m4v', '.3gp', '.3g2'
+        '.webm', '.flv', '.vob', '.ogv', '.gifv', '.mov', '.wmv', '.m4p', '.m4v',
+        '.mpg', '.mp2', '.mpeg', '.mpe', '.mpv', '.m2v', '.m4v', '.3gp', '.3g2'
+    ],
+    preview_audio: [
+        '.wav', '.flac', '.ogg', '.mp3'
     ],
     audio: [
-        '.wav', '.flac', '.m4a', '.wma', '.ast', '.aac', '.ogg', '.mp3'
+        '.m4a', '.wma', '.ast', '.aac'
     ],
     archive: [
         '.7z', '.bz2', '.deb', '.click', '.rpm', '.gz', '.bz', '.lz', '.tar',
