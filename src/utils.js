@@ -73,6 +73,15 @@ function sanitize_path(path) {
     return path;
 }
 
+function download_link(base, path) {
+    var url = base;
+    if (url[url.length - 1] === '/') {
+        url = url.substring(0, url.length - 1);
+    }
+
+    return url + path;
+}
+
 function log(message) {
     console.log('ownCloud-files-scope.bhdouglass LOG:', message);
 }
@@ -89,6 +98,7 @@ module.exports = {
     nice_bytes: nice_bytes,
     setup_endpoint: setup_endpoint,
     sanitize_path: sanitize_path,
+    download_link: download_link,
     log: log,
     warn: warn,
     error: error,

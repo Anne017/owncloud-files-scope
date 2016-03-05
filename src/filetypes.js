@@ -5,9 +5,12 @@ module.exports = {
     doc: [
         '.doc', '.docx', '.rtf', '.odt'
     ],
+    preview_image: [
+        '.jpg', '.jpeg', '.gif', '.bmp', '.png', '.ppm', '.pgm', '.pbm', '.pnm',
+        '.svg'
+    ],
     image: [
-        '.jpg', '.jpeg', '.jfif', '.exif', '.tiff', '.gif', '.bmp', '.png',
-        '.ppm', '.pgm', '.pbm', '.pnm', '.webp', '.svg', '.ai'
+        '.jfif', '.exif', '.webp', '.ai','.tiff'
     ],
     video: [
         '.webm', '.mkv', '.flv', '.vob', '.ogv', '.gifv', '.avi', '.mov', '.wmv',

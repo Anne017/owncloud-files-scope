@@ -168,6 +168,9 @@ scope.initialize(
                                             else if (filetypes.doc.indexOf(ext) >= 0) {
                                                 file_result.set_art(path.join(scope.scope_directory, 'file_doc.png'));
                                             }
+                                            else if (filetypes.preview_image.indexOf(ext) >= 0) {
+                                                file_result.set_art(utils.download_link(endpoint.url, file.filename));
+                                            }
                                             else if (filetypes.image.indexOf(ext) >= 0) {
                                                 file_result.set_art(path.join(scope.scope_directory, 'file_image.png'));
                                             }
@@ -284,18 +287,12 @@ scope.initialize(
                         }
 
                         if (result.get('file')) {
-                            var urlpath = endpoint.url;
-                            if (urlpath[urlpath.length - 1] === '/') {
-                                urlpath = urlpath.substring(0, urlpath.length - 1);
-                            }
-                            urlpath += result.get('path');
-
                             var download = new scopes.lib.PreviewWidget('actions', 'actions');
                             download.add_attribute_value('actions',[
                                 {
                                     id: 'download',
                                     label: _('Download'),
-                                    uri: urlpath,
+                                    uri: utils.download_link(endpoint.url, result.get('path')),
                                 }
                             ]);
 
