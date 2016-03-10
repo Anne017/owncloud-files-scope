@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-03-05 06:35+0000\n"
+"POT-Creation-Date: 2016-03-10 15:21+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -26,8 +26,7 @@ msgid "An unofficial ownCloud file browsing scope"
 msgstr ""
 
 #: ../src/data/owncloud-files-settings.ini.in.h:1
-msgid ""
-"URL to your ownCloud webdav (https://example.org/owncloud/remote.php/webdav)"
+msgid "URL to your ownCloud webdav (https://example.org/owncloud/)"
 msgstr ""
 
 #: ../src/data/owncloud-files-settings.ini.in.h:2

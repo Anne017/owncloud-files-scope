@@ -1,1 +1,1 @@
-XGETTEXT_KEYWORDS=--c++ --keyword=tr --keyword=tr:1,2 --keyword=dtr:2 --keyword=dtr:2,3 --keyword=N_
+XGETTEXT_KEYWORDS=--c++ --keyword=_ --keyword=_:1,2 --keyword=tr --keyword=tr:1,2 --keyword=dtr:2 --keyword=dtr:2,3 --keyword=N_

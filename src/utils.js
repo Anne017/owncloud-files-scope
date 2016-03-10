@@ -46,14 +46,28 @@ function setup_endpoint(scope) {
     var username = scope.settings.username ? scope.settings.username.get_string() : '';
     var password = scope.settings.password ? scope.settings.password.get_string() : '';
 
+    //Compensate for scope bug: https://bugs.launchpad.net/ubuntu/+source/unity-api/+bug/1552082
+    if (username[0] === '"' && username[username.length - 1] === '"') {
+        username = username.slice(1, username.length - 1);
+    }
+
+    if (password[0] === '"' && password[password.length - 1] === '"') {
+        password = password.slice(1, password.length - 1);
+    }
+
     //Borrowed from https://github.com/perry-mitchell/webdav-fs/blob/master/source/index.js#L22
-    var access_url = (username.length > 0) ? url.replace(/(https?:\/\/)/i, "$1" + encodeURIComponent(username) + ":" + encodeURIComponent(password) + "@") : url;
-    if (access_url[access_url.length - 1] !== '/') {
-        access_url += '/';
+    var external_url = (username.length > 0) ? url.replace(/(https?:\/\/)/i, "$1" + encodeURIComponent(username) + ":" + encodeURIComponent(password) + "@") : url;
+    if (external_url[external_url.length - 1] !== '/') {
+        external_url += '/';
+    }
+
+    if (url[url.length - 1] !== '/') {
+        url += '/';
     }
 
     return {
-        url: access_url,
+        url: url,
+        external_url: external_url,
         username: username,
         password: password
     };
@@ -70,6 +84,10 @@ function sanitize_path(path) {
         path += encodeURIComponent(parts[index]);
     }
 
+    if (path[path.length - 1] !== '/') {
+        path += '/';
+    }
+
     return path;
 }
 
@@ -84,6 +102,7 @@ function download_link(base, path) {
 
 //Borrowed from http://stackoverflow.com/a/6274381
 function shuffle(a) {
+    console.log('shuffle');
     var j, x, i;
     for (i = a.length; i; i -= 1) {
         j = Math.floor(Math.random() * i);

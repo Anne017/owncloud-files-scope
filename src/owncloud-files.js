@@ -114,26 +114,6 @@ scope.initialize(
                         }
 
                         webdav.getDir(endpoint, dir).then(function(contents, res) {
-                            var contents = contents.sort(function(a, b) {
-                                if (a.type == 'file' && b.type == 'directory') {
-                                    return 1;
-                                }
-                                else if (a.type == 'directory' && b.type == 'file') {
-                                    return -1;
-                                }
-                                else if (a.filename < b.filename) {
-                                    return -1;
-                                }
-                                else if (a.filename > b.filename) {
-                                    return 1;
-                                }
-
-                                return 0;
-                            }).filter(function(file) {
-                                //Remove potentially problamatic entries
-                                return (['/webdav', dir, '.', '..', null, ''].indexOf(file.filename) == -1);
-                            });
-
                             if (contents.length === 0) {
                                 utils.warn('empty folder');
 
@@ -149,64 +129,63 @@ scope.initialize(
                                     var file = contents[index];
 
                                     if (file) {
-                                        if (hide_dot && path.basename(file.filename).charAt(0) == '.') {
+                                        if (hide_dot && file.basename.charAt(0) == '.') {
                                             continue;
                                         }
                                         else {
                                             if (file.type == 'file') {
                                                 var file_result = new scopes.lib.CategorisedResult(file_category);
-                                                file_result.set_uri(file.filename);
-                                                file_result.set_title(path.basename(file.filename));
+                                                file_result.set_uri(file.path);
+                                                file_result.set_title(file.basename);
                                                 file_result.set('file', true);
-                                                file_result.set('path', file.filename);
+                                                file_result.set('path', file.path);
                                                 file_result.set('mtime', moment(new Date(file.lastmod)).fromNow());
                                                 file_result.set('size', utils.nice_bytes(file.size));
-                                                file_result.set('mime', JSON.stringify(file.mime));
+                                                file_result.set('mimetype', file.mimetype);
 
-                                                var ext = path.extname(file.filename);
                                                 //TODO do this checking based on mimetype
-                                                if (filetypes.text.indexOf(ext) >= 0) {
+                                                if (filetypes.text.indexOf(file.ext) >= 0) {
                                                     file_result.set_art(path.join(scope.scope_directory, 'file_text.png'));
                                                 }
-                                                else if (filetypes.doc.indexOf(ext) >= 0) {
+                                                else if (filetypes.doc.indexOf(file.ext) >= 0) {
                                                     file_result.set_art(path.join(scope.scope_directory, 'file_doc.png'));
                                                 }
-                                                else if (filetypes.preview_image.indexOf(ext) >= 0) {
-                                                    file_result.set_art(utils.download_link(endpoint.url, file.filename));
-                                                    gallery.push(utils.download_link(endpoint.url, file.filename));
+                                                else if (filetypes.preview_image.indexOf(file.ext) >= 0) {
+                                                    file_result.set_art(utils.download_link(endpoint.external_url, file.path));
+                                                    gallery.push(utils.download_link(endpoint.external_url, file.path));
                                                 }
-                                                else if (filetypes.image.indexOf(ext) >= 0) {
+                                                else if (filetypes.image.indexOf(file.ext) >= 0) {
                                                     file_result.set_art(path.join(scope.scope_directory, 'file_image.png'));
                                                 }
-                                                else if (filetypes.preview_video.indexOf(ext) >= 0) {
+                                                else if (filetypes.preview_video.indexOf(file.ext) >= 0) {
                                                     file_result.set_art(path.join(scope.scope_directory, 'file_movie.png'));
                                                     //file_result.set('video', true);
                                                     //TODO figure out why videos won't play
                                                 }
-                                                else if (filetypes.video.indexOf(ext) >= 0) {
+                                                else if (filetypes.video.indexOf(file.ext) >= 0) {
                                                     file_result.set_art(path.join(scope.scope_directory, 'file_movie.png'));
                                                 }
-                                                else if (filetypes.preview_audio.indexOf(ext) >= 0) {
+                                                else if (filetypes.preview_audio.indexOf(file.ext) >= 0) {
                                                     file_result.set_art(path.join(scope.scope_directory, 'file_sound.png'));
                                                     file_result.set('audio', true);
-                                                    playlist.push(utils.download_link(endpoint.url, file.filename));
+                                                    playlist.push(utils.download_link(endpoint.external_url, file.path));
                                                 }
-                                                else if (filetypes.audio.indexOf(ext) >= 0) {
+                                                else if (filetypes.audio.indexOf(file.ext) >= 0) {
                                                     file_result.set_art(path.join(scope.scope_directory, 'file_sound.png'));
                                                 }
-                                                else if (filetypes.archive.indexOf(ext) >= 0) {
+                                                else if (filetypes.archive.indexOf(file.ext) >= 0) {
                                                     file_result.set_art(path.join(scope.scope_directory, 'file_zip.png'));
                                                 }
-                                                else if (filetypes.pdf.indexOf(ext) >= 0) {
+                                                else if (filetypes.pdf.indexOf(file.ext) >= 0) {
                                                     file_result.set_art(path.join(scope.scope_directory, 'file_pdf.png'));
                                                 }
-                                                else if (filetypes.code.indexOf(ext) >= 0) {
+                                                else if (filetypes.code.indexOf(file.ext) >= 0) {
                                                     file_result.set_art(path.join(scope.scope_directory, 'file_code.png'));
                                                 }
-                                                else if (filetypes.powerpoint.indexOf(ext) >= 0) {
+                                                else if (filetypes.powerpoint.indexOf(file.ext) >= 0) {
                                                     file_result.set_art(path.join(scope.scope_directory, 'file_ppt.png'));
                                                 }
-                                                else if (filetypes.spreadsheet.indexOf(ext) >= 0) {
+                                                else if (filetypes.spreadsheet.indexOf(file.ext) >= 0) {
                                                     file_result.set_art(path.join(scope.scope_directory, 'file_xls.png'));
                                                 }
                                                 else {
@@ -217,10 +196,10 @@ scope.initialize(
                                             }
                                             else {
                                                 var folder_result = new scopes.lib.CategorisedResult(folder_category);
-                                                folder_result.set_uri('scope://owncloud-files-scope.bhdouglass_owncloud-files?q=/' + utils.sanitize_path(file.filename));
-                                                folder_result.set_title(path.basename(file.filename));
+                                                folder_result.set_uri('scope://owncloud-files-scope.bhdouglass_owncloud-files?q=/' + utils.sanitize_path(file.path));
+                                                folder_result.set_title(file.basename);
                                                 folder_result.set('file', false);
-                                                folder_result.set('path', file.filename);
+                                                folder_result.set('path', file.path);
                                                 folder_result.set('mtime', moment(new Date(file.lastmod)).fromNow());
                                                 folder_result.set_intercept_activation();
                                                 folder_result.set_art(path.join(scope.scope_directory, 'folder.png'));
@@ -317,10 +296,14 @@ scope.initialize(
                         error_header.add_attribute_mapping('title', 'title');
                         error_header.add_attribute_mapping('subtitle', 'subtitle');
 
-                        var message = new scopes.lib.PreviewWidget('message', 'text');
-                        message.add_attribute_value('text', _('Error Message') + ': ' + result.get('message'));
+                        preview_reply.push([error_image, error_header]);
 
-                        preview_reply.push([error_image, error_header, message]);
+                        if (result.get('message')) {
+                            var message = new scopes.lib.PreviewWidget('message', 'text');
+                            message.add_attribute_value('text', _('Error Message') + ': ' + result.get('message'));
+
+                            preview_reply.push([message]);
+                        }
                     }
                     else {
                         var image = new scopes.lib.PreviewWidget('image', 'image');
@@ -336,7 +319,7 @@ scope.initialize(
                                 'tracks',
                                 {
                                     'title': result.title(),
-                                    'source': utils.download_link(endpoint.url, result.get('path')),
+                                    'source': utils.download_link(endpoint.external_url, result.get('path')),
                                 }
                             );
 
@@ -344,7 +327,7 @@ scope.initialize(
                         }
                         else if (result.get('video')) {
                             var video = new scopes.lib.PreviewWidget('video', 'video');
-                            video.add_attribute_value('source', utils.download_link(endpoint.url, result.get('path')));
+                            video.add_attribute_value('source', utils.download_link(endpoint.external_url, result.get('path')));
 
                             preview_reply.push([video, header]);
                         }
@@ -402,7 +385,7 @@ scope.initialize(
                                 {
                                     id: 'download',
                                     label: _('Download'),
-                                    uri: utils.download_link(endpoint.url, result.get('path')),
+                                    uri: utils.download_link(endpoint.external_url, result.get('path')),
                                 }
                             ]);
 
